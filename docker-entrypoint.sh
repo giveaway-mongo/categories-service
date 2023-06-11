@@ -33,4 +33,3 @@ if [[ $RUN == "test" ]]; then
   npm run test:docker-e2e
   exit
 fi
-

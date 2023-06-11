@@ -8,8 +8,10 @@ echo $OSTYPE
 PROTO_PATHS=(
   ./protos/common/*.proto 
   ./protos/sample/*.proto 
+  ./protos/category/*.proto 
   ./protos/broker/user/*.proto 
   ./protos/broker/sample/*.proto
+  ./protos/broker/category/*.proto
 )
 
 # For windows and linux based OS, there are different methods for protogen
@@ -20,5 +22,4 @@ else
 fi;
 
 sleep 3
-
 
