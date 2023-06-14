@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { SamplesController } from '../src/samples/samples.controller';
+import { SamplesController } from '../src/modules/samples/samples.controller';
 import prisma from './client';
 import { samples } from './fixtures/samples';
 import { applyFixtures } from './utils/applyFixtures';
