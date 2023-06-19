@@ -5,6 +5,8 @@ const paths = [
   'common/common.proto',
   'sample/sample.proto',
   'sample/service.proto',
+  'category/category.proto',
+  'category/service.proto',
 ];
 
 export const protoPath = generateCommonProtoPaths(

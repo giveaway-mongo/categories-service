@@ -36,7 +36,7 @@ export class CategoriesService {
       description: result.description,
     });
 
-    return { result, errors: [] };
+    return { result, errors: null };
   }
 
   async update(
@@ -56,7 +56,7 @@ export class CategoriesService {
       description: result.description,
     });
 
-    return { result, errors: [] };
+    return { result, errors: null };
   }
 
   async list(
@@ -77,7 +77,7 @@ export class CategoriesService {
       }),
     ]);
 
-    return { results, count, errors: [] };
+    return { results, count, errors: null };
   }
 
   async detail({ guid }: Prisma.CategoryWhereUniqueInput): Promise<
@@ -91,6 +91,6 @@ export class CategoriesService {
       },
     });
 
-    return { result, errors: [] };
+    return { result, errors: null };
   }
 }
