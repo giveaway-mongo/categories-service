@@ -24,6 +24,11 @@ export class CategoriesService {
       guid: generateGuid(),
       title: createCategoryDto.title,
       description: createCategoryDto.description,
+      parent: {
+        connect: {
+          id: createCategoryDto.parentId,
+        },
+      },
     };
 
     const result = await this.prisma.category.create({
@@ -50,7 +55,7 @@ export class CategoriesService {
       },
     });
 
-    this.client.emit<any, CategoryEvent>('category.category.add', {
+    this.client.emit<any, CategoryEvent>('category.category.update', {
       id: result.guid,
       title: result.title,
       description: result.description,
