@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: category
+spec:
+  selector:
+    matchLabels:
+      app: category-app
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: category-app
+    spec:
+      containers:
+        - name: category
+          image: ghcr.io/giveaway-mongo/category:latest
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: category-configmap
+          ports:
+            - containerPort: 50051
+              name: category-port
