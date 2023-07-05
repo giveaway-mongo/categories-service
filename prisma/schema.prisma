@@ -11,27 +11,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Sample {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  guid      String   @unique
-  title     String
-  text      String
-  isActive  Boolean? @default(true)
-  isDeleted Boolean? @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-}
-
 model Category {
   id          String     @id @default(auto()) @map("_id") @db.ObjectId
   guid        String     @unique
+  userGuid    String
   title       String
   description String
   isActive    Boolean?   @default(true)
   isDeleted   Boolean?   @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @default(now())
-  parentId    String?    @unique @db.ObjectId
-  parent      Category?  @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parentGuid  String?    @db.ObjectId
+  parent      Category?  @relation("CategoryChildren", fields: [parentGuid], references: [id], onDelete: NoAction, onUpdate: NoAction)
   children    Category[] @relation("CategoryChildren")
 }

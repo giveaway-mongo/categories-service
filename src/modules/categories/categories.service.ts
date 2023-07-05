@@ -20,15 +20,20 @@ export class CategoriesService {
   async create(
     createCategoryDto: CategoryCreateRequest,
   ): Promise<WithError<{ result: Category }>> {
+    const parent = createCategoryDto.parentGuid
+      ? {
+          connect: {
+            guid: createCategoryDto.parentGuid,
+          },
+        }
+      : undefined;
+
     const categoryToCreate: Prisma.CategoryCreateInput = {
       guid: generateGuid(),
+      userGuid: createCategoryDto.userGuid,
       title: createCategoryDto.title,
       description: createCategoryDto.description,
-      parent: {
-        connect: {
-          id: createCategoryDto.parentId,
-        },
-      },
+      parent,
     };
 
     const result = await this.prisma.category.create({
@@ -46,10 +51,22 @@ export class CategoriesService {
 
   async update(
     guid: string,
-    category: CategoryUpdateRequest,
+    categoryUpdateRequest: CategoryUpdateRequest,
   ): Promise<WithError<{ result: Category }>> {
+    const parent = categoryUpdateRequest.parentGuid
+      ? {
+          connect: {
+            guid: categoryUpdateRequest.parentGuid,
+          },
+        }
+      : undefined;
+
     const result = await this.prisma.category.update({
-      data: category,
+      data: {
+        title: categoryUpdateRequest.title,
+        description: categoryUpdateRequest.description,
+        parent,
+      },
       where: {
         guid,
       },

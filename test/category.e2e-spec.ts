@@ -24,74 +24,72 @@ describe('CategoryController (e2e)', () => {
 
     console.log(response);
 
-    // expect(response.count).toEqual(3);
+    const results = response.results;
+    const count = response.count;
 
-    // const results = response.results;
-    // const count = response.count;
+    expect(count).toEqual(2);
 
-    // expect(count).toEqual(3);
+    expect(results[0].guid).toEqual('039b06f5-e1e8-48f4-8de9-4f88da9e07df');
+    expect(results[0].title).toEqual('First category title');
+    expect(results[0].description).toEqual('Some description');
 
-    // expect(results[0].guid).toEqual('66e33c1b-938a-497b-89db-56532322ac49');
-    // expect(results[0].title).toEqual('First sample title');
-    // expect(results[0].text).toEqual('This is the first test sample!');
-
-    // expect(results[1].guid).toEqual('9c3feb28-1438-456e-be4f-d6edabebb3d2');
-    // expect(results[1].title).toEqual('Second sample title');
-    // expect(results[1].text).toEqual('This is the second test sample!');
-
-    // expect(results[2].guid).toEqual('039b06f5-e1e8-48f4-8de9-4f88da9e07df');
-    // expect(results[2].title).toEqual('Third sample title');
-    // expect(results[2].text).toEqual('This is the third test sample!');
+    expect(results[1].guid).toEqual('9c3feb28-1438-456e-be4f-d6edabebb3d2');
+    expect(results[1].title).toEqual('Second category title');
+    expect(results[1].description).toEqual('Some description');
   });
 
-  // it('gets one sample', async () => {
-  //   const response = await controller.detail({
-  //     guid: '9c3feb28-1438-456e-be4f-d6edabebb3d2',
-  //   });
+  it('gets one category', async () => {
+    const response = await controller.detail({
+      guid: '9c3feb28-1438-456e-be4f-d6edabebb3d2',
+    });
 
-  //   const result = response.result;
+    const result = response.result;
 
-  //   expect(result.guid).toEqual('9c3feb28-1438-456e-be4f-d6edabebb3d2');
-  //   expect(result.title).toEqual('Second sample title');
-  //   expect(result.text).toEqual('This is the second test sample!');
-  // });
+    expect(result.guid).toEqual('9c3feb28-1438-456e-be4f-d6edabebb3d2');
+    expect(result.title).toEqual('Second category title');
+    expect(result.description).toEqual('Some description');
+  });
 
-  // it('adds one sample', async () => {
-  //   const sample: SampleCreateRequest = {
-  //     title: 'Title for created sample',
-  //     text: 'Text for created sample',
-  //   };
+  it('adds one category', async () => {
+    const category: CategoryCreateRequest = {
+      title: 'Title for created category',
+      description: 'Text for created category',
+      userGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07d4',
+      parentGuid: null,
+    };
 
-  //   const response = await controller.create(sample);
+    const response = await controller.create(category);
 
-  //   expect(response.result.guid).toBeDefined();
-  //   expect(response.result.title).toEqual(sample.title);
-  //   expect(response.result.text).toEqual(sample.text);
-  // });
+    expect(response.result.guid).toBeDefined();
+    expect(response.result.title).toEqual(category.title);
+    expect(response.result.description).toEqual(category.description);
+  });
 
-  // it('updates one sample', async () => {
-  //   const updatedSample: SampleUpdateRequest = {
-  //     guid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
-  //     title: 'Updated title',
-  //     text: 'Updated text',
-  //   };
+  it('updates one category', async () => {
+    const updatedCategory: CategoryUpdateRequest = {
+      guid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
+      title: 'Updated title',
+      description: 'Updated description',
+      userGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07d4',
+      parentGuid: null,
+    };
 
-  //   const response = await controller.update(updatedSample);
+    const response = await controller.update(updatedCategory);
 
-  //   const result = response.result;
+    const result = response.result;
 
-  //   expect(result.guid).toEqual(updatedSample.guid);
-  //   expect(result.title).toEqual(updatedSample.title);
-  //   expect(result.text).toEqual(updatedSample.text);
+    expect(result.guid).toEqual(updatedCategory.guid);
+    expect(result.title).toEqual(updatedCategory.title);
+    expect(result.description).toEqual(updatedCategory.description);
 
-  //   const detailResponse = await controller.detail({
-  //     guid: updatedSample.guid,
-  //   });
+    const detailResponse = await controller.detail({
+      guid: updatedCategory.guid,
+    });
 
-  //   const detailResult = detailResponse.result;
+    const detailResult = detailResponse.result;
 
-  //   expect(detailResult.guid).toEqual(updatedSample.guid);
-  //   expect(detailResult.title).toEqual(updatedSample.title);
-  //   expect(detailResult.text).toEqual(updatedSample.text);
-  // });
+    expect(detailResult.guid).toEqual(updatedCategory.guid);
+    expect(detailResult.title).toEqual(updatedCategory.title);
+    expect(detailResult.description).toEqual(updatedCategory.description);
+  });
 });

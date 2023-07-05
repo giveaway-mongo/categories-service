@@ -7,8 +7,8 @@ echo $OSTYPE
 
 PROTO_PATHS=(
   ./protos/common/*.proto
-  ./protos/sample/*.proto
-  ./protos/broker/sample/*.proto
+  ./protos/category/*.proto
+  ./protos/broker/category/*.proto
   ./protos/broker/user/*.proto
 )
 
