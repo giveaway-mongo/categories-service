@@ -1,14 +1,10 @@
 import { Controller } from '@nestjs/common';
-import { Payload, GrpcMethod } from '@nestjs/microservices';
+import { Payload, GrpcMethod, RpcException } from '@nestjs/microservices';
 import { CategoriesService } from './categories.service';
-import {
-  CategoryCreateRequest,
-  CategoryCreateResponse,
-} from './dto/create-category.dto';
-import {
-  CategoryUpdateRequest,
-  CategoryUpdateResponse,
-} from './dto/update-category.dto';
+import { CategoryCreateInput } from './dto/create-category.dto';
+import { CategoryCreateResponse } from '@protogen/category/category';
+import { CategoryUpdateInput } from './dto/update-category.dto';
+import { CategoryUpdateResponse } from '@protogen/category/category';
 import {
   CategoryListRequest,
   CategoryListResponse,
@@ -24,7 +20,7 @@ export class CategoriesController {
 
   @GrpcMethod('CategoriesService', 'CreateCategory')
   async create(
-    @Payload() createCategoryRequest: CategoryCreateRequest,
+    @Payload() createCategoryRequest: CategoryCreateInput,
   ): Promise<CategoryCreateResponse> {
     const { result, errors } = await this.categoriesService.create(
       createCategoryRequest,
@@ -35,7 +31,7 @@ export class CategoriesController {
 
   @GrpcMethod('CategoriesService', 'UpdateCategory')
   async update(
-    categoryUpdateRequest: CategoryUpdateRequest,
+    categoryUpdateRequest: CategoryUpdateInput,
   ): Promise<CategoryUpdateResponse> {
     const guid = categoryUpdateRequest.guid;
 

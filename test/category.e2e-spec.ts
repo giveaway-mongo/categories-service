@@ -19,10 +19,8 @@ describe('CategoryController (e2e)', () => {
     await applyFixtures(categories, prisma.category);
   });
 
-  it('gets list of categories', async () => {
+  it('get: list of categories', async () => {
     const response = await controller.list({ options: undefined });
-
-    console.log(response);
 
     const results = response.results;
     const count = response.count;
@@ -38,7 +36,7 @@ describe('CategoryController (e2e)', () => {
     expect(results[1].description).toEqual('Some description');
   });
 
-  it('gets one category', async () => {
+  it('get: one category', async () => {
     const response = await controller.detail({
       guid: '9c3feb28-1438-456e-be4f-d6edabebb3d2',
     });
@@ -50,7 +48,7 @@ describe('CategoryController (e2e)', () => {
     expect(result.description).toEqual('Some description');
   });
 
-  it('adds one category', async () => {
+  it('add: one category', async () => {
     const category: CategoryCreateRequest = {
       title: 'Title for created category',
       description: 'Text for created category',
@@ -65,7 +63,36 @@ describe('CategoryController (e2e)', () => {
     expect(response.result.description).toEqual(category.description);
   });
 
-  it('updates one category', async () => {
+  it('add: one category with parent', async () => {
+    const category: CategoryCreateRequest = {
+      userGuid: '66e33c1b-938a-497b-89db-56532322ac41',
+      title: 'First category title',
+      description: 'Some description',
+      parentGuid: '9c3feb28-1438-456e-be4f-d6edabebb3d2',
+    };
+
+    const response = await controller.create(category);
+
+    expect(response.result.guid).toBeDefined();
+    expect(response.result.title).toEqual(category.title);
+    expect(response.result.description).toEqual(category.description);
+    expect(response.result.parentGuid).toBeDefined();
+  });
+
+  it('add: throw when invalid parentGuid provided', async () => {
+    const category: CategoryCreateRequest = {
+      userGuid: '66e33c1b-938a-497b-89db-56532322ac41',
+      title: 'First category title',
+      description: 'Some description',
+      parentGuid: 'invalid',
+    };
+
+    const createFn = async () => await controller.create(category);
+
+    await expect(createFn).rejects.toThrow();
+  });
+
+  it('update: one category', async () => {
     const updatedCategory: CategoryUpdateRequest = {
       guid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
       title: 'Updated title',
@@ -91,5 +118,33 @@ describe('CategoryController (e2e)', () => {
     expect(detailResult.guid).toEqual(updatedCategory.guid);
     expect(detailResult.title).toEqual(updatedCategory.title);
     expect(detailResult.description).toEqual(updatedCategory.description);
+  });
+
+  it('update: throw when invalid parentGuid provided', async () => {
+    const category: CategoryUpdateRequest = {
+      guid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
+      title: 'Updated title',
+      description: 'Updated description',
+      userGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07d4',
+      parentGuid: 'invalid',
+    };
+
+    const createFn = async () => await controller.update(category);
+
+    await expect(createFn).rejects.toThrow();
+  });
+
+  it('update: throw when self referencing', async () => {
+    const category: CategoryUpdateRequest = {
+      guid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
+      title: 'Updated title',
+      description: 'Updated description',
+      userGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07d4',
+      parentGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
+    };
+
+    const createFn = async () => await controller.update(category);
+
+    await expect(createFn).rejects.toThrow();
   });
 });

@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CategoryCreateRequest } from './dto/create-category.dto';
-import { CategoryUpdateRequest } from './dto/update-category.dto';
+import { CategoryCreateInput } from './dto/create-category.dto';
+import { CategoryUpdateInput } from './dto/update-category.dto';
 import { Category, Prisma } from '@prisma/generated';
 import { WithError } from '@src/common/types/utils';
 import { generateGuid } from '@src/common/utils/generate-guid';
-import { ClientRMQ } from '@nestjs/microservices';
+import { ClientRMQ, RpcException } from '@nestjs/microservices';
 import { PrismaService } from '@src/prisma/prisma.service';
 import { CategoryEvent } from './dto/broker.dto';
 import { CategoryListRequest } from './dto/list-category.dto';
@@ -18,7 +18,7 @@ export class CategoriesService {
   ) {}
 
   async create(
-    createCategoryDto: CategoryCreateRequest,
+    createCategoryDto: CategoryCreateInput,
   ): Promise<WithError<{ result: Category }>> {
     const parent = createCategoryDto.parentGuid
       ? {
@@ -36,22 +36,33 @@ export class CategoriesService {
       parent,
     };
 
-    const result = await this.prisma.category.create({
-      data: categoryToCreate,
-    });
+    try {
+      const result = await this.prisma.category.create({
+        data: categoryToCreate,
+      });
 
-    this.client.emit<any, CategoryEvent>('category.category.add', {
-      id: result.guid,
-      title: result.title,
-      description: result.description,
-    });
+      this.client.emit<any, CategoryEvent>('category.category.add', {
+        id: result.guid,
+        title: result.title,
+        description: result.description,
+      });
 
-    return { result, errors: null };
+      return { result, errors: null };
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2025') {
+          throw new RpcException('Invalid parentGuid');
+        }
+
+        return { result: null, errors: null };
+      }
+      throw e;
+    }
   }
 
   async update(
     guid: string,
-    categoryUpdateRequest: CategoryUpdateRequest,
+    categoryUpdateRequest: CategoryUpdateInput,
   ): Promise<WithError<{ result: Category }>> {
     const parent = categoryUpdateRequest.parentGuid
       ? {
@@ -61,24 +72,39 @@ export class CategoriesService {
         }
       : undefined;
 
-    const result = await this.prisma.category.update({
-      data: {
-        title: categoryUpdateRequest.title,
-        description: categoryUpdateRequest.description,
-        parent,
-      },
-      where: {
-        guid,
-      },
-    });
+    if (guid === categoryUpdateRequest.parentGuid) {
+      throw new RpcException('Self reference');
+    }
 
-    this.client.emit<any, CategoryEvent>('category.category.update', {
-      id: result.guid,
-      title: result.title,
-      description: result.description,
-    });
+    try {
+      const result = await this.prisma.category.update({
+        data: {
+          title: categoryUpdateRequest.title,
+          description: categoryUpdateRequest.description,
+          parent,
+        },
+        where: {
+          guid,
+        },
+      });
 
-    return { result, errors: null };
+      this.client.emit<any, CategoryEvent>('category.category.update', {
+        id: result.guid,
+        title: result.title,
+        description: result.description,
+      });
+
+      return { result, errors: null };
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2025') {
+          throw new RpcException('Invalid parentGuid');
+        }
+
+        return { result: null, errors: null };
+      }
+      throw e;
+    }
   }
 
   async list(
