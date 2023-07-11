@@ -1,9 +1,4 @@
-import {
-  ArgumentsHost,
-  BadRequestException,
-  Catch,
-  ExceptionFilter,
-} from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { getErrors } from '@common/utils/error';
 import { ERROR_CODES, SERVER_ERROR } from '@common/constants/error';

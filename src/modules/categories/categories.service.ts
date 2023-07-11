@@ -9,6 +9,7 @@ import { PrismaService } from '@src/prisma/prisma.service';
 import { CategoryEvent } from './dto/broker.dto';
 import { CategoryListRequest } from './dto/list-category.dto';
 import { getListOptions } from '@src/common/utils/list-params';
+import { PRISMA_ERROR_CODES } from '@src/constants/prisma-error-codes';
 
 @Injectable()
 export class CategoriesService {
@@ -36,28 +37,25 @@ export class CategoriesService {
       parent,
     };
 
+    let result: Category;
     try {
-      const result = await this.prisma.category.create({
+      result = await this.prisma.category.create({
         data: categoryToCreate,
       });
-
-      this.client.emit<any, CategoryEvent>('category.category.add', {
-        id: result.guid,
-        title: result.title,
-        description: result.description,
-      });
-
-      return { result, errors: null };
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError) {
-        if (e.code === 'P2025') {
-          throw new RpcException('Invalid parentGuid');
-        }
-
-        return { result: null, errors: null };
+      if (e.code === PRISMA_ERROR_CODES.DEPENDING_RELATION_NOT_FOUND) {
+        throw new RpcException('Invalid parentGuid');
       }
       throw e;
     }
+
+    this.client.emit<any, CategoryEvent>('category.category.add', {
+      id: result.guid,
+      title: result.title,
+      description: result.description,
+    });
+
+    return { result, errors: null };
   }
 
   async update(
@@ -76,8 +74,9 @@ export class CategoriesService {
       throw new RpcException('Self reference');
     }
 
+    let result: Category;
     try {
-      const result = await this.prisma.category.update({
+      result = await this.prisma.category.update({
         data: {
           title: categoryUpdateRequest.title,
           description: categoryUpdateRequest.description,
@@ -87,24 +86,20 @@ export class CategoriesService {
           guid,
         },
       });
-
-      this.client.emit<any, CategoryEvent>('category.category.update', {
-        id: result.guid,
-        title: result.title,
-        description: result.description,
-      });
-
-      return { result, errors: null };
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError) {
-        if (e.code === 'P2025') {
-          throw new RpcException('Invalid parentGuid');
-        }
-
-        return { result: null, errors: null };
+      if (e.code === PRISMA_ERROR_CODES.DEPENDING_RELATION_NOT_FOUND) {
+        throw new RpcException('Invalid parentGuid');
       }
       throw e;
     }
+
+    this.client.emit<any, CategoryEvent>('category.category.update', {
+      id: result.guid,
+      title: result.title,
+      description: result.description,
+    });
+
+    return { result, errors: null };
   }
 
   async list(
