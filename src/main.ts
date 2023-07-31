@@ -5,12 +5,11 @@ import { getGrpcOptions } from '@common/grpc/grpc-options';
 import { protobufConfigure } from '@common/grpc/protobuf-config';
 import { getRabbitMQOptions } from '@common/rabbitMQ/rabbitMQ-options';
 import { protoPath } from './constants/proto-path';
-import { ValidationPipe } from '@nestjs/common';
 import {
   RpcExceptionFilter,
   ServerExceptionFilter,
 } from '@common/utils/rpc-exception.filter';
-import { getValidationPipeOptions } from './common/utils/validation-pipe-options';
+import { setUpValidationPipe } from './common/utils/setup-validation-pipe';
 
 protobufConfigure();
 
@@ -19,7 +18,8 @@ async function bootstrap() {
     snapshot: true,
   });
 
-  app.useGlobalPipes(new ValidationPipe(getValidationPipeOptions()));
+  setUpValidationPipe(app);
+
   app.useGlobalFilters(new ServerExceptionFilter());
   app.useGlobalFilters(new RpcExceptionFilter());
 

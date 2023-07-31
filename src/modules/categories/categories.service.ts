@@ -9,45 +9,45 @@ import { PrismaService } from '@src/prisma/prisma.service';
 import { CategoryEvent } from './dto/broker.dto';
 import { CategoryListRequest } from './dto/list-category.dto';
 import { getListOptions } from '@src/common/utils/list-params';
-import { PRISMA_ERROR_CODES } from '@src/constants/prisma-error-codes';
+import { getErrors } from '@src/common/utils/error';
+import { ERROR_CODES } from '@src/common/constants/error';
+import { CategoriesRepository } from './categories.repository';
 
 @Injectable()
 export class CategoriesService {
   constructor(
     private prisma: PrismaService,
+    private categoriesRepository: CategoriesRepository,
     @Inject('categories-service') private client: ClientRMQ,
   ) {}
 
   async create(
     createCategoryDto: CategoryCreateInput,
   ): Promise<WithError<{ result: Category }>> {
-    const parent = createCategoryDto.parentGuid
-      ? {
-          connect: {
-            guid: createCategoryDto.parentGuid,
-          },
-        }
-      : undefined;
-
     const categoryToCreate: Prisma.CategoryCreateInput = {
       guid: generateGuid(),
       userGuid: createCategoryDto.userGuid,
       title: createCategoryDto.title,
       description: createCategoryDto.description,
-      parent,
     };
 
-    let result: Category;
-    try {
-      result = await this.prisma.category.create({
-        data: categoryToCreate,
-      });
-    } catch (e) {
-      if (e.code === PRISMA_ERROR_CODES.DEPENDING_RELATION_NOT_FOUND) {
-        throw new RpcException('Invalid parentGuid');
+    const { parentGuid } = createCategoryDto;
+
+    if (parentGuid) {
+      if (!(await this.categoriesRepository.getCategoryByGuid(parentGuid))) {
+        throw new RpcException(`Category with id ${parentGuid} doesn't exist`);
       }
-      throw e;
+
+      categoryToCreate.parent = {
+        connect: {
+          guid: parentGuid,
+        },
+      };
     }
+
+    const result = await this.categoriesRepository.createCategory(
+      categoryToCreate,
+    );
 
     this.client.emit<any, CategoryEvent>('category.category.add', {
       id: result.guid,
@@ -60,38 +60,44 @@ export class CategoriesService {
 
   async update(
     guid: string,
-    categoryUpdateRequest: CategoryUpdateInput,
+    categoryUpdateDto: CategoryUpdateInput,
   ): Promise<WithError<{ result: Category }>> {
-    const parent = categoryUpdateRequest.parentGuid
-      ? {
-          connect: {
-            guid: categoryUpdateRequest.parentGuid,
-          },
-        }
-      : undefined;
-
-    if (guid === categoryUpdateRequest.parentGuid) {
-      throw new RpcException('Self reference');
+    if (!(await this.categoriesRepository.getCategoryByGuid(guid))) {
+      throw new RpcException(
+        getErrors({
+          nonFieldErrors: ['Not found'],
+          errorCode: ERROR_CODES.NOT_FOUND,
+        }),
+      );
     }
 
-    let result: Category;
-    try {
-      result = await this.prisma.category.update({
-        data: {
-          title: categoryUpdateRequest.title,
-          description: categoryUpdateRequest.description,
-          parent,
-        },
-        where: {
-          guid,
-        },
-      });
-    } catch (e) {
-      if (e.code === PRISMA_ERROR_CODES.DEPENDING_RELATION_NOT_FOUND) {
-        throw new RpcException('Invalid parentGuid');
+    const categoryToUpdate: Prisma.CategoryUpdateInput = {
+      title: categoryUpdateDto.title,
+      description: categoryUpdateDto.description,
+    };
+
+    const { parentGuid } = categoryUpdateDto;
+
+    if (parentGuid) {
+      if (!(await this.categoriesRepository.getCategoryByGuid(parentGuid))) {
+        throw new RpcException(`Category with id ${parentGuid} doesn't exist`);
       }
-      throw e;
+
+      categoryToUpdate.parent = {
+        connect: {
+          guid: parentGuid,
+        },
+      };
     }
+
+    if (guid === categoryUpdateDto.parentGuid) {
+      throw new RpcException('Self nesting is not allowed');
+    }
+
+    const result = await this.categoriesRepository.updateCategory(
+      guid,
+      categoryToUpdate,
+    );
 
     this.client.emit<any, CategoryEvent>('category.category.update', {
       id: result.guid,
@@ -110,17 +116,16 @@ export class CategoriesService {
       Prisma.CategoryOrderByWithRelationInput
     >(listRequest.options);
 
-    const [count, results] = await this.prisma.$transaction([
-      this.prisma.category.count(),
-      this.prisma.category.findMany({
+    const { count, categories } = await this.categoriesRepository.getCategories(
+      {
         skip,
         orderBy,
         where,
         take,
-      }),
-    ]);
+      },
+    );
 
-    return { results, count, errors: null };
+    return { results: categories, count, errors: null };
   }
 
   async detail({ guid }: Prisma.CategoryWhereUniqueInput): Promise<
@@ -128,12 +133,17 @@ export class CategoriesService {
       result: Category;
     }>
   > {
-    const result = await this.prisma.category.findUniqueOrThrow({
-      where: {
-        guid,
-      },
-    });
+    const category = await this.categoriesRepository.getCategoryByGuid(guid);
 
-    return { result, errors: null };
+    if (!category) {
+      throw new RpcException(
+        getErrors({
+          nonFieldErrors: ['Not found'],
+          errorCode: ERROR_CODES.NOT_FOUND,
+        }),
+      );
+    }
+
+    return { result: category, errors: null };
   }
 }

@@ -21,7 +21,7 @@ model Category {
   isDeleted   Boolean?   @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @default(now())
-  parentGuid  String?    @db.ObjectId
-  parent      Category?  @relation("CategoryChildren", fields: [parentGuid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parentGuid  String?
+  parent      Category?  @relation("CategoryChildren", fields: [parentGuid], references: [guid], onDelete: NoAction, onUpdate: NoAction)
   children    Category[] @relation("CategoryChildren")
 }

@@ -11,6 +11,7 @@ import {
   RpcExceptionFilter,
   ServerExceptionFilter,
 } from '@common/utils/rpc-exception.filter';
+import { getValidationPipeOptions } from '@src/common/utils/validation-pipe-options';
 
 const execAsync = promisify(exec);
 
@@ -28,9 +29,9 @@ global.beforeAll(async () => {
     imports: [AppModule],
   }).compile();
 
-  app = await testingModule
+  app = testingModule
     .createNestApplication()
-    .useGlobalPipes(new ValidationPipe({ transform: true }))
+    .useGlobalPipes(new ValidationPipe(getValidationPipeOptions()))
     .useGlobalFilters(new ServerExceptionFilter())
     .useGlobalFilters(new RpcExceptionFilter());
 

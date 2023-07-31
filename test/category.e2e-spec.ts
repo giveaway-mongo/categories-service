@@ -1,150 +1,256 @@
-import { INestApplication } from '@nestjs/common';
-import { CategoriesController } from '@src/modules/categories/categories.controller';
+import * as GRPC from '@grpc/grpc-js';
+import * as ProtoLoader from '@grpc/proto-loader';
+import { protoPath } from '@src/constants/proto-path';
 import prisma from './client';
 import { categories } from './fixtures/categories';
 import { applyFixtures } from './utils/applyFixtures';
-import {
-  CategoryCreateRequest,
-  CategoryUpdateRequest,
-} from '@protogen/category/category';
+import { CategoryCreateRequest } from '@protogen/category/category';
+
+const HOST = process.env.HOST || 'localhost';
+const PORT = process.env.PORT || 50051;
+
+const URL = `${HOST}:${PORT}`;
 
 describe('CategoryController (e2e)', () => {
-  let app: INestApplication;
-  let controller: CategoriesController;
+  let client: any;
 
   beforeEach(async () => {
-    app = (global as any).app;
-    controller = app.get<CategoriesController>(CategoriesController);
-
     await applyFixtures(categories, prisma.category);
+
+    // Load proto-buffers for test gRPC dispatch
+    const proto = ProtoLoader.loadSync(protoPath) as any;
+    // Create Raw gRPC client object
+    const protoGRPC = GRPC.loadPackageDefinition(proto) as any;
+    // Create client connected to started services
+    client = new protoGRPC.category.CategoriesService(
+      URL,
+      GRPC.credentials.createInsecure(),
+    );
   });
 
-  it('get: list of categories', async () => {
-    const response = await controller.list({ options: undefined });
+  describe('ListCategory', () => {
+    it('should get a list of categories', async () => {
+      return new Promise<void>((resolve) => {
+        client.ListCategory({}, (err: any, res: any) => {
+          expect(err).toBeNull;
+          expect(res.results).toHaveLength(categories.length);
 
-    const results = response.results;
-    const count = response.count;
-
-    expect(count).toEqual(2);
-
-    expect(results[0].guid).toEqual('039b06f5-e1e8-48f4-8de9-4f88da9e07df');
-    expect(results[0].title).toEqual('First category title');
-    expect(results[0].description).toEqual('Some description');
-
-    expect(results[1].guid).toEqual('9c3feb28-1438-456e-be4f-d6edabebb3d2');
-    expect(results[1].title).toEqual('Second category title');
-    expect(results[1].description).toEqual('Some description');
+          resolve();
+        });
+      });
+    });
   });
 
-  it('get: one category', async () => {
-    const response = await controller.detail({
-      guid: '9c3feb28-1438-456e-be4f-d6edabebb3d2',
+  describe('CreateCategory', () => {
+    it('should create a category', async () => {
+      const category: CategoryCreateRequest = {
+        userGuid: 'UserGuid',
+        title: 'Mock title',
+        description: 'Mock description',
+        parentGuid: null,
+      };
+
+      return new Promise<void>((resolve) => {
+        client.CreateCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
+
+          expect(res.result.guid).toBeDefined();
+          expect(res.result.title).toEqual(category.title);
+          expect(res.result.description).toEqual(category.description);
+
+          resolve();
+        });
+      });
     });
 
-    const result = response.result;
+    it('should return 400 if validation failed', async () => {
+      const category = {
+        title: 'Mock title',
+        description: '',
+        parentGuid: null,
+      };
 
-    expect(result.guid).toEqual('9c3feb28-1438-456e-be4f-d6edabebb3d2');
-    expect(result.title).toEqual('Second category title');
-    expect(result.description).toEqual('Some description');
-  });
+      return new Promise<void>((resolve) => {
+        client.CreateCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
 
-  it('add: one category', async () => {
-    const category: CategoryCreateRequest = {
-      title: 'Title for created category',
-      description: 'Text for created category',
-      userGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07d4',
-      parentGuid: null,
-    };
+          expect(res.errors.errorCode).toEqual(400);
+          expect(res.errors.fieldErrors).toHaveLength(2);
 
-    const response = await controller.create(category);
-
-    expect(response.result.guid).toBeDefined();
-    expect(response.result.title).toEqual(category.title);
-    expect(response.result.description).toEqual(category.description);
-  });
-
-  it('add: one category with parent', async () => {
-    const category: CategoryCreateRequest = {
-      userGuid: '66e33c1b-938a-497b-89db-56532322ac41',
-      title: 'First category title',
-      description: 'Some description',
-      parentGuid: '9c3feb28-1438-456e-be4f-d6edabebb3d2',
-    };
-
-    const response = await controller.create(category);
-
-    expect(response.result.guid).toBeDefined();
-    expect(response.result.title).toEqual(category.title);
-    expect(response.result.description).toEqual(category.description);
-    expect(response.result.parentGuid).toBeDefined();
-  });
-
-  it('add: throw when invalid parentGuid provided', async () => {
-    const category: CategoryCreateRequest = {
-      userGuid: '66e33c1b-938a-497b-89db-56532322ac41',
-      title: 'First category title',
-      description: 'Some description',
-      parentGuid: 'invalid',
-    };
-
-    const createFn = async () => await controller.create(category);
-
-    await expect(createFn).rejects.toThrow();
-  });
-
-  it('update: one category', async () => {
-    const updatedCategory: CategoryUpdateRequest = {
-      guid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
-      title: 'Updated title',
-      description: 'Updated description',
-      userGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07d4',
-      parentGuid: null,
-    };
-
-    const response = await controller.update(updatedCategory);
-
-    const result = response.result;
-
-    expect(result.guid).toEqual(updatedCategory.guid);
-    expect(result.title).toEqual(updatedCategory.title);
-    expect(result.description).toEqual(updatedCategory.description);
-
-    const detailResponse = await controller.detail({
-      guid: updatedCategory.guid,
+          resolve();
+        });
+      });
     });
 
-    const detailResult = detailResponse.result;
+    it('should create a category with parent', async () => {
+      const category: CategoryCreateRequest = {
+        userGuid: 'UserGuid',
+        title: 'Mock title',
+        description: 'Mock description',
+        parentGuid: categories[0].guid,
+      };
 
-    expect(detailResult.guid).toEqual(updatedCategory.guid);
-    expect(detailResult.title).toEqual(updatedCategory.title);
-    expect(detailResult.description).toEqual(updatedCategory.description);
+      return new Promise<void>((resolve) => {
+        client.CreateCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
+
+          expect(res.result.guid).toBeDefined();
+          expect(res.result.title).toEqual(category.title);
+          expect(res.result.description).toEqual(category.description);
+          expect(res.result.parentGuid).toEqual(category.parentGuid);
+
+          resolve();
+        });
+      });
+    });
+
+    it('should throw if unknown parent guid is passed', async () => {
+      const category: CategoryCreateRequest = {
+        userGuid: 'UserGuid',
+        title: 'Mock title',
+        description: 'Mock description',
+        parentGuid: 'invalidGuid',
+      };
+
+      return new Promise<void>((resolve) => {
+        client.CreateCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
+
+          expect(res.errors.errorCode).toEqual(400);
+
+          resolve();
+        });
+      });
+    });
   });
 
-  it('update: throw when invalid parentGuid provided', async () => {
-    const category: CategoryUpdateRequest = {
-      guid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
-      title: 'Updated title',
-      description: 'Updated description',
-      userGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07d4',
-      parentGuid: 'invalid',
-    };
+  describe('UpdateCategory', () => {
+    it('should update category', async () => {
+      const category = {
+        guid: categories[0].guid,
+        title: 'Updated title',
+      };
 
-    const createFn = async () => await controller.update(category);
+      return new Promise<void>((resolve) => {
+        client.UpdateCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
 
-    await expect(createFn).rejects.toThrow();
+          expect(res.result.guid).toBeDefined();
+          expect(res.result.title).toEqual(category.title);
+          expect(res.result.description).toEqual(categories[0].description);
+
+          resolve();
+        });
+      });
+    });
+
+    it('should return 400 if validation failed', async () => {
+      const category = {
+        guid: categories[0].guid,
+        title: '',
+        description: '',
+      };
+
+      return new Promise<void>((resolve) => {
+        client.UpdateCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
+
+          expect(res.errors.errorCode).toEqual(400);
+          expect(res.errors.fieldErrors).toHaveLength(2);
+
+          resolve();
+        });
+      });
+    });
+
+    it('should add parent to category', async () => {
+      const category = {
+        guid: categories[0].guid,
+        parentGuid: categories[1].guid,
+      };
+
+      return new Promise<void>((resolve) => {
+        client.UpdateCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
+
+          expect(res.result.guid).toBeDefined();
+          expect(res.result.title).toEqual(categories[0].title);
+          expect(res.result.description).toEqual(categories[0].description);
+          expect(res.result.parentGuid).toEqual(category.parentGuid);
+
+          resolve();
+        });
+      });
+    });
+
+    it('should return 404 if unknown guid is passed', async () => {
+      const category = {
+        guid: 'invalidGuid',
+        title: 'Updated title',
+      };
+
+      return new Promise<void>((resolve) => {
+        client.UpdateCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
+
+          expect(res.errors.errorCode).toEqual(404);
+
+          resolve();
+        });
+      });
+    });
+
+    it('should return 400 if unknown parent guid is passed', async () => {
+      const category = {
+        guid: categories[0].guid,
+        parentGuid: 'invalidGuid',
+      };
+
+      return new Promise<void>((resolve) => {
+        client.UpdateCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
+
+          expect(res.errors.errorCode).toEqual(400);
+
+          resolve();
+        });
+      });
+    });
   });
 
-  it('update: throw when self referencing', async () => {
-    const category: CategoryUpdateRequest = {
-      guid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
-      title: 'Updated title',
-      description: 'Updated description',
-      userGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07d4',
-      parentGuid: '039b06f5-e1e8-48f4-8de9-4f88da9e07df',
-    };
+  describe('DetailCategory', () => {
+    it('should get details of category', async () => {
+      const category = {
+        guid: categories[0].guid,
+      };
 
-    const createFn = async () => await controller.update(category);
+      return new Promise<void>((resolve) => {
+        client.DetailCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
 
-    await expect(createFn).rejects.toThrow();
+          expect(res.result.guid).toEqual(categories[0].guid);
+          expect(res.result.title).toEqual(categories[0].title);
+          expect(res.result.description).toEqual(categories[0].description);
+
+          resolve();
+        });
+      });
+    });
+
+    it('should return 404 if unknown category guid is passed', async () => {
+      const category = {
+        guid: 'invalidGuid',
+      };
+
+      return new Promise<void>((resolve) => {
+        client.DetailCategory(category, (err: any, res: any) => {
+          expect(err).toBeNull;
+
+          expect(res.errors.errorCode).toEqual(404);
+
+          resolve();
+        });
+      });
+    });
   });
 });
