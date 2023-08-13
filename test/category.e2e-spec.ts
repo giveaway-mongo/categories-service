@@ -14,9 +14,7 @@ const URL = `${HOST}:${PORT}`;
 describe('CategoryController (e2e)', () => {
   let client: any;
 
-  beforeEach(async () => {
-    await applyFixtures(categories, prisma.category);
-
+  beforeAll(async () => {
     // Load proto-buffers for test gRPC dispatch
     const proto = ProtoLoader.loadSync(protoPath) as any;
     // Create Raw gRPC client object
@@ -26,6 +24,10 @@ describe('CategoryController (e2e)', () => {
       URL,
       GRPC.credentials.createInsecure(),
     );
+  });
+
+  beforeEach(async () => {
+    await applyFixtures(categories, prisma.category);
   });
 
   describe('ListCategory', () => {
@@ -183,7 +185,7 @@ describe('CategoryController (e2e)', () => {
       });
     });
 
-    it('should return 404 if unknown guid is passed', async () => {
+    it('should return 404 if unknown category guid is passed', async () => {
       const category = {
         guid: 'invalidGuid',
         title: 'Updated title',
@@ -196,6 +198,25 @@ describe('CategoryController (e2e)', () => {
           expect(res.errors.errorCode).toEqual(404);
 
           resolve();
+        });
+      });
+    });
+
+    it('should return 404 if deleted category guid is passed', async () => {
+      const category = {
+        guid: categories[0].guid,
+        title: 'Updated title',
+      };
+
+      return new Promise<void>((resolve) => {
+        client.DeleteCategory(category, () => {
+          client.UpdateCategory(category, (err: any, res: any) => {
+            expect(err).toBeNull;
+
+            expect(res.errors.errorCode).toEqual(404);
+
+            resolve();
+          });
         });
       });
     });
@@ -249,6 +270,45 @@ describe('CategoryController (e2e)', () => {
           expect(res.errors.errorCode).toEqual(404);
 
           resolve();
+        });
+      });
+    });
+
+    it('should return 404 if deleted category guid is passed', async () => {
+      const category = {
+        guid: categories[0].guid,
+      };
+
+      return new Promise<void>((resolve) => {
+        client.DeleteCategory(category, () => {
+          client.DetailCategory(category, (err: any, res: any) => {
+            expect(err).toBeNull;
+
+            expect(res.errors.errorCode).toEqual(404);
+
+            resolve();
+          });
+        });
+      });
+    });
+  });
+
+  describe('DeleteCategory', () => {
+    it('should delete category', async () => {
+      const category = {
+        guid: categories[0].guid,
+      };
+
+      return new Promise<void>((resolve) => {
+        client.DeleteCategory(category, (err: any) => {
+          expect(err).toBeNull;
+
+          // get list and check
+          client.ListCategory({}, (err: any, res: any) => {
+            expect(res.results).toHaveLength(categories.length - 1);
+
+            resolve();
+          });
         });
       });
     });

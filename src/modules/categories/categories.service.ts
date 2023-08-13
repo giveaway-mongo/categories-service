@@ -34,7 +34,7 @@ export class CategoriesService {
     const { parentGuid } = createCategoryDto;
 
     if (parentGuid) {
-      if (!(await this.categoriesRepository.getCategoryByGuid(parentGuid))) {
+      if (!(await this.categoriesRepository.getCategory(parentGuid))) {
         throw new RpcException(`Category with id ${parentGuid} doesn't exist`);
       }
 
@@ -62,7 +62,7 @@ export class CategoriesService {
     guid: string,
     categoryUpdateDto: CategoryUpdateInput,
   ): Promise<WithError<{ result: Category }>> {
-    if (!(await this.categoriesRepository.getCategoryByGuid(guid))) {
+    if (!(await this.categoriesRepository.getCategory(guid))) {
       throw new RpcException(
         getErrors({
           nonFieldErrors: ['Not found'],
@@ -79,7 +79,7 @@ export class CategoriesService {
     const { parentGuid } = categoryUpdateDto;
 
     if (parentGuid) {
-      if (!(await this.categoriesRepository.getCategoryByGuid(parentGuid))) {
+      if (!(await this.categoriesRepository.getCategory(parentGuid))) {
         throw new RpcException(`Category with id ${parentGuid} doesn't exist`);
       }
 
@@ -120,7 +120,7 @@ export class CategoriesService {
       {
         skip,
         orderBy,
-        where,
+        where: { isDeleted: false, ...where },
         take,
       },
     );
@@ -133,7 +133,7 @@ export class CategoriesService {
       result: Category;
     }>
   > {
-    const category = await this.categoriesRepository.getCategoryByGuid(guid);
+    const category = await this.categoriesRepository.getCategory(guid);
 
     if (!category) {
       throw new RpcException(
@@ -145,5 +145,13 @@ export class CategoriesService {
     }
 
     return { result: category, errors: null };
+  }
+
+  async delete({
+    guid,
+  }: Prisma.CategoryWhereUniqueInput): Promise<WithError<{ result: null }>> {
+    await this.categoriesRepository.deleteCategory(guid);
+
+    return { result: null, errors: null };
   }
 }

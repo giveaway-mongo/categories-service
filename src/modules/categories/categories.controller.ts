@@ -2,7 +2,11 @@ import { Controller } from '@nestjs/common';
 import { Payload, GrpcMethod, RpcException } from '@nestjs/microservices';
 import { CategoriesService } from './categories.service';
 import { CategoryCreateInput } from './dto/create-category.dto';
-import { CategoryCreateResponse } from '@protogen/category/category';
+import {
+  CategoryCreateResponse,
+  CategoryDeleteRequest,
+  CategoryDeleteResponse,
+} from '@protogen/category/category';
 import { CategoryUpdateInput } from './dto/update-category.dto';
 import { CategoryUpdateResponse } from '@protogen/category/category';
 import {
@@ -59,5 +63,14 @@ export class CategoriesController {
     const { result, errors } = await this.categoriesService.detail({ guid });
 
     return { result, errors };
+  }
+
+  @GrpcMethod('CategoriesService', 'DeleteCategory')
+  async delete({
+    guid,
+  }: CategoryDeleteRequest): Promise<CategoryDeleteResponse> {
+    const { errors } = await this.categoriesService.delete({ guid });
+
+    return { errors };
   }
 }

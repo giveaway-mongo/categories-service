@@ -11,7 +11,7 @@ import {
   RpcExceptionFilter,
   ServerExceptionFilter,
 } from '@common/utils/rpc-exception.filter';
-import { getValidationPipeOptions } from '@src/common/utils/validation-pipe-options';
+import { setUpValidationPipe } from '@src/common/utils/setup-validation-pipe';
 
 const execAsync = promisify(exec);
 
@@ -31,9 +31,10 @@ global.beforeAll(async () => {
 
   app = testingModule
     .createNestApplication()
-    .useGlobalPipes(new ValidationPipe(getValidationPipeOptions()))
     .useGlobalFilters(new ServerExceptionFilter())
     .useGlobalFilters(new RpcExceptionFilter());
+
+  setUpValidationPipe(app);
 
   app.connectMicroservice(getGrpcTestingOptions('category', protoPath), {
     inheritAppConfig: true,

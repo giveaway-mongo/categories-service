@@ -12,10 +12,11 @@ export class CategoriesRepository {
     return this.prisma.category.create({ data: createCategoryDto });
   }
 
-  async getCategoryByGuid(categoryGuid: string) {
-    return this.prisma.category.findUnique({
+  async getCategory(categoryGuid: string, isDeleted = false) {
+    return this.prisma.category.findFirst({
       where: {
         guid: categoryGuid,
+        isDeleted,
       },
     });
   }
@@ -32,7 +33,11 @@ export class CategoriesRepository {
 
   async getCategories({ skip, orderBy, where, take }) {
     const [count, categories] = await this.prisma.$transaction([
-      this.prisma.category.count(),
+      this.prisma.category.count({
+        where: {
+          ...where,
+        },
+      }),
       this.prisma.category.findMany({
         skip,
         orderBy,
@@ -42,5 +47,9 @@ export class CategoriesRepository {
     ]);
 
     return { count, categories };
+  }
+
+  async deleteCategory(guid: string): Promise<Category> {
+    return this.prisma.category.delete({ where: { guid } });
   }
 }
